@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SleepSync — Sleep Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #060b18;
+      --bg2:       #0c1425;
+      --glass:     rgba(255,255,255,0.04);
+      --glass-b:   rgba(255,255,255,0.08);
+      --teal:      #00e5c4;
+      --teal-dim:  rgba(0,229,196,0.15);
+      --amber:     #ffab3e;
+      --amber-dim: rgba(255,171,62,0.15);
+      --rose:      #ff5f7e;
+      --rose-dim:  rgba(255,95,126,0.15);
+      --blue:      #4facfe;
+      --text:      #e8edf5;
+      --muted:     rgba(232,237,245,0.45);
+      --border:    rgba(255,255,255,0.07);
+      --radius:    18px;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Starfield bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(0,229,196,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 100%, rgba(79,172,254,0.08) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(255,171,62,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: white;
+      animation: twinkle var(--d) ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+      0%,100% { opacity: var(--min-op); transform: scale(1); }
+      50%      { opacity: var(--max-op); transform: scale(1.4); }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 30px 16px 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+      animation: fadeDown 0.6s ease both;
+    }
+    .moon-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 18px rgba(0,229,196,0.5));
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Glass card ── */
+    .card {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+      margin-bottom: 18px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 5px;
+      margin-bottom: 26px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 6px;
+      border: none;
+      border-radius: 9px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--muted);
+      background: transparent;
+      transition: all 0.25s ease;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+      color: var(--bg);
+      font-weight: 700;
+      box-shadow: 0 4px 14px rgba(0,229,196,0.3);
+    }
+
+    /* ── Tab content ── */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeIn 0.3s ease both; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 8px var(--teal);
+    }
+
+    /* ── Input group ── */
+    .input-group {
+      margin-bottom: 16px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 13px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--teal);
+      background: rgba(0,229,196,0.06);
+      box-shadow: 0 0 0 3px rgba(0,229,196,0.12);
+    }
+    .input-group input::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.4);
+    }
+
+    /* ── Button ── */
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--teal) 0%, var(--blue) 100%);
+      color: #060b18;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0,229,196,0.25);
+      margin-top: 8px;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(0,229,196,0.4);
+    }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ── Stats grid ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .stat-pill {
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 16px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+    .stat-pill.teal  { border-color: rgba(0,229,196,0.25); background: var(--teal-dim); }
+    .stat-pill.amber { border-color: rgba(255,171,62,0.25); background: var(--amber-dim); }
+    .stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .stat-pill.teal  .stat-val  { color: var(--teal);  }
+    .stat-pill.amber .stat-val  { color: var(--amber); }
+    .stat-lbl {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Insight box ── */
+    .insight {
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(0,229,196,0.2);
+      background: linear-gradient(135deg, rgba(0,229,196,0.07) 0%, rgba(79,172,254,0.07) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .insight::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,196,0.15), transparent 70%);
+    }
+    .insight-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 8px;
+    }
+    .insight-text {
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    /* ── Weekly block ── */
+    .weekly-block {
+      background: var(--amber-dim);
+      border: 1px solid rgba(255,171,62,0.2);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    .weekly-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--amber);
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .weekly-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .weekly-row span:first-child { color: var(--muted); }
+    .weekly-row span:last-child  { font-weight: 600; color: var(--amber); }
+
+    /* Progress track */
+    .progress-track {
+      background: rgba(0,0,0,0.3);
+      border-radius: 100px;
+      height: 10px;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, var(--amber) 0%, var(--rose) 100%);
+      transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow: 0 0 10px rgba(255,171,62,0.5);
+    }
+    .progress-label {
+      text-align: right;
+      font-size: 0.78rem;
+      color: var(--amber);
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    /* ── Chart ── */
+    .chart-wrap {
+      border-radius: 14px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border);
+      padding: 16px;
+      margin-top: 4px;
+    }
+    .chart-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    canvas#chart {
+      width: 100%;
+      display: block;
+    }
+
+    /* ── History ── */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      animation: fadeIn 0.25s ease both;
+      transition: background 0.2s;
+    }
+    .history-item:hover { background: rgba(255,255,255,0.06); }
+
+    .h-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: var(--teal-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .h-info { flex: 1; }
+    .h-date {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .h-times {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .h-dur {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--teal);
+      margin-right: 10px;
+    }
+    .del-btn {
+      background: rgba(255,95,126,0.12);
+      border: 1px solid rgba(255,95,126,0.2);
+      color: var(--rose);
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .del-btn:hover {
+      background: var(--rose);
+      color: white;
+      box-shadow: 0 0 10px rgba(255,95,126,0.4);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .empty-icon { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      color: #060b18;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 12px 24px;
+      border-radius: 100px;
+      box-shadow: 0 8px 30px rgba(0,229,196,0.4);
+      z-index: 999;
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease;
+      opacity: 0;
+      white-space: nowrap;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Sleep quality badge */
+    .quality-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .quality-badge.good  { background: rgba(0,229,196,0.15); color: var(--teal); border: 1px solid rgba(0,229,196,0.3); }
+    .quality-badge.ok    { background: rgba(255,171,62,0.15); color: var(--amber); border: 1px solid rgba(255,171,62,0.3); }
+    .quality-badge.bad   { background: rgba(255,95,126,0.15); color: var(--rose); border: 1px solid rgba(255,95,126,0.3); }
+
+    /* ── Animations ── */
+    @keyframes fadeDown {
+      from { opacity:0; transform:translateY(-16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(16px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity:0; }
+      to   { opacity:1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div class="stars" id="stars"></div>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="moon-icon">🌙</span>
+    <h1>SleepSync</h1>
+    <p>Sync your sleep. Own your day.</p>
+  </div>
+
+  <!-- Main card -->
+  <div class="card">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="log">✦ Log</button>
+      <button class="tab" data-tab="analysis">◎ Analysis</button>
+      <button class="tab" data-tab="history">≡ History</button>
+    </div>
+
+    <!-- LOG TAB -->
+    <div class="tab-pane active" id="tab-log">
+      <div class="section-title"><span class="dot"></span> Track Tonight's Sleep</div>
+      <div class="input-group">
+        <label>Date</label>
+        <input type="date" id="inp-date" />
+      </div>
+      <div class="input-group">
+        <label>Sleep Time</label>
+        <input type="time" id="inp-sleep" />
+      </div>
+      <div class="input-group">
+        <label>Wake Up Time</label>
+        <input type="time" id="inp-wake" />
+      </div>
+      <button class="btn-primary" id="log-btn">💤 Log Sleep</button>
+    </div>
+
+    <!-- ANALYSIS TAB -->
+    <div class="tab-pane" id="tab-analysis">
+      <div class="section-title"><span class="dot"></span> Your Sleep Stats</div>
+
+      <div class="stats-row">
+        <div class="stat-pill teal">
+          <span class="stat-val" id="stat-avg">—</span>
+          <span class="stat-lbl">Avg / Night</span>
+        </div>
+        <div class="stat-pill amber">
+          <span class="stat-val" id="stat-nights">0</span>
+          <span class="stat-lbl">Nights Logged</span>
+        </div>
+      </div>
+
+      <div class="insight">
+        <div class="insight-label">✦ Sleep Insight</div>
+        <p class="insight-text" id="insight-text">Log your first sleep to unlock personalized insights.</p>
+      </div>
+
+      <div class="weekly-block">
+        <div class="weekly-title">📅 Weekly Target — 56 hrs (8h × 7)</div>
+        <div class="weekly-row">
+          <span>Slept this week</span>
+          <span id="wk-slept">0h</span>
+        </div>
+        <div class="weekly-row">
+          <span>Remaining</span>
+          <span id="wk-remain">56h</span>
+        </div>
+        <div class="weekly-row">
+          <span>Coverage</span>
+          <span id="wk-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="wk-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-label" id="wk-bar-label">0 / 56 hrs</div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-label">Last 7 nights — hours slept</div>
+        <canvas id="chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="tab-pane" id="tab-history">
+      <div class="section-title"><span class="dot"></span> Sleep Log</div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Stars ── */
+(function() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2 + 0.5;
+    const delay = Math.random() * 6;
+    const dur   = 3 + Math.random() * 5;
+    const minOp = (Math.random() * 0.2).toFixed(2);
+    const maxOp = (Math.random() * 0.6 + 0.2).toFixed(2);
+    Object.assign(s.style, {
+      left: Math.random()*100+'%',
+      top:  Math.random()*100+'%',
+      width:  size+'px',
+      height: size+'px',
+      '--d': dur+'s',
+      '--min-op': minOp,
+      '--max-op': maxOp,
+      animationDelay: delay+'s',
+    });
+    c.appendChild(s);
+  }
+})();
+
+/* ── Storage helpers ── */
+const KEY = 'slumber_v2';
+function getRecords() { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+function saveRecords(r) { localStorage.setItem(KEY, JSON.stringify(r)); }
+
+/* ── Toast ── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── Tab switching ── */
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const pane = document.getElementById('tab-' + btn.dataset.tab);
+    pane.classList.add('active');
+    if (btn.dataset.tab === 'analysis') { renderAnalysis(); drawChart(); }
+    if (btn.dataset.tab === 'history')  { renderHistory(); }
+  });
+});
+
+/* ── Init date ── */
+document.getElementById('inp-date').valueAsDate = new Date();
+
+/* ── Log sleep ── */
+document.getElementById('log-btn').addEventListener('click', () => {
+  const date  = document.getElementById('inp-date').value;
+  const sleep = document.getElementById('inp-sleep').value;
+  const wake  = document.getElementById('inp-wake').value;
+  if (!date || !sleep || !wake) { toast('⚠️ Fill in all fields'); return; }
+
+  let sleepDt = new Date(date + 'T' + sleep);
+  let wakeDt  = new Date(date + 'T' + wake);
+  if (wakeDt <= sleepDt) wakeDt.setDate(wakeDt.getDate() + 1);
+  const hrs = (wakeDt - sleepDt) / 36e5;
+  if (hrs > 20) { toast('⚠️ Duration seems off'); return; }
+
+  const records = getRecords();
+  const idx = records.findIndex(r => r.date === date);
+  const entry = { date, sleep, wake, hrs: +hrs.toFixed(2) };
+
+  if (idx > -1) {
+    if (!confirm('Entry for this date exists. Overwrite?')) return;
+    records[idx] = entry;
+  } else {
+    records.push(entry);
+  }
+  records.sort((a,b) => b.date.localeCompare(a.date));
+  saveRecords(records);
+
+  document.getElementById('inp-sleep').value = '';
+  document.getElementById('inp-wake').value  = '';
+  toast('✦ Sleep logged!');
+
+  // Switch to analysis
+  document.querySelector('[data-tab="analysis"]').click();
+});
+
+/* ── Helpers ── */
+function fmtHrs(h) {
+  const hh = Math.floor(h), mm = Math.round((h-hh)*60);
+  return mm ? `${hh}h ${mm}m` : `${hh}h`;
+}
+function quality(h) {
+  if (h >= 7 && h <= 9) return { cls:'good', label:'😴 Great' };
+  if (h >= 6)           return { cls:'ok',   label:'😐 Okay' };
+  return                       { cls:'bad',  label:'😫 Low' };
+}
+function weekRange() {
+  const now = new Date();
+  const start = new Date(now); start.setDate(start.getDate() - 6); start.setHours(0,0,0,0);
+  const end   = new Date(now); end.setHours(23,59,59,999);
+  return { start, end };
+}
+
+/* ── Analysis ── */
+function renderAnalysis() {
+  const records = getRecords();
+  const avgEl   = document.getElementById('stat-avg');
+  const nighEl  = document.getElementById('stat-nights');
+  const insEl   = document.getElementById('insight-text');
+
+  if (!records.length) {
+    avgEl.textContent = '—';
+    nighEl.textContent = '0';
+    insEl.textContent = 'Log your first sleep to unlock personalized insights.';
+    document.getElementById('wk-slept').textContent = '0h';
+    document.getElementById('wk-remain').textContent = '56h';
+    document.getElementById('wk-pct').textContent = '0%';
+    document.getElementById('wk-bar').style.width = '0%';
+    document.getElementById('wk-bar-label').textContent = '0 / 56 hrs';
+    return;
+  }
+
+  const avg = records.reduce((s,r) => s + r.hrs, 0) / records.length;
+  avgEl.textContent  = fmtHrs(avg);
+  nighEl.textContent = records.length;
+
+  // Weekly
+  const { start, end } = weekRange();
+  const wkRec = records.filter(r => {
+    const d = new Date(r.date+'T12:00:00');
+    return d >= start && d <= end;
+  });
+  const wkHrs = wkRec.reduce((s,r) => s + r.hrs, 0);
+  const TARGET = 56;
+  const pct    = Math.min(wkHrs / TARGET * 100, 100);
+  const remain = Math.max(TARGET - wkHrs, 0);
+
+  document.getElementById('wk-slept').textContent  = fmtHrs(wkHrs);
+  document.getElementById('wk-remain').textContent = fmtHrs(remain);
+  document.getElementById('wk-pct').textContent    = pct.toFixed(0) + '%';
+  document.getElementById('wk-bar').style.width    = pct + '%';
+  document.getElementById('wk-bar-label').textContent = `${wkHrs.toFixed(1)} / 56 hrs`;
+
+  // Insight text
+  let msg = '';
+  if (avg >= 8) msg = `You're averaging ${fmtHrs(avg)} — that's excellent! Your body is well-rested and recovering optimally. Keep this up! 🌟`;
+  else if (avg >= 7) msg = `You're averaging ${fmtHrs(avg)} — right in the sweet spot. Consistent 7–9 hour sleep is linked to sharper focus and better mood. Nice work!`;
+  else if (avg >= 6) msg = `Averaging ${fmtHrs(avg)} is decent but not ideal. Try pushing to 7 hours — even 30 extra minutes makes a real difference in energy and memory.`;
+  else msg = `You're only averaging ${fmtHrs(avg)}. Chronic sleep deprivation impacts cognition, immunity, and mood. Try setting a fixed bedtime tonight. 💪`;
+
+  if (remain === 0) msg += ` You've hit your weekly goal of 56 hours — incredible! 🎯`;
+  else msg += ` ${fmtHrs(remain)} more to hit your weekly 56-hour target.`;
+  insEl.textContent = msg;
+}
+
+/* ── Chart ── */
+function drawChart() {
+  const records = getRecords();
+  const canvas  = document.getElementById('chart');
+  const ctx     = canvas.getContext('2d');
+  const W       = canvas.offsetWidth;
+  const H       = 180;
+  canvas.width  = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (!records.length) {
+    ctx.fillStyle = 'rgba(232,237,245,0.2)';
+    ctx.font = 'Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data yet', W/2, H/2);
+    return;
+  }
+
+  const last7 = records.slice(0, 7).reverse();
+  const PAD   = { top: 30, bottom: 40, left: 12, right: 12 };
+  const cW    = W - PAD.left - PAD.right;
+  const cH    = H - PAD.top - PAD.bottom;
+  const barW  = cW / last7.length;
+  const MAX   = 12;
+
+  // Gridlines + y labels
+  [0, 4, 8, 12].forEach(v => {
+    const y = PAD.top + cH - (v / MAX) * cH;
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,4]);
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(W - PAD.right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(232,237,245,0.3)';
+    ctx.font = `10px Outfit`;
+    ctx.textAlign = 'left';
+    if (v > 0) ctx.fillText(v+'h', 2, y + 4);
+  });
+
+  // Recommended line
+  const recY = PAD.top + cH - (8 / MAX) * cH;
+  ctx.strokeStyle = 'rgba(255,171,62,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5,5]);
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, recY);
+  ctx.lineTo(W - PAD.right, recY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,171,62,0.7)';
+  ctx.font = 'Outfit, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('8h target', W - PAD.right - 2, recY - 4);
+
+  // Bars
+  last7.forEach((rec, i) => {
+    const bH = (rec.hrs / MAX) * cH;
+    const x  = PAD.left + i * barW + barW * 0.2;
+    const y  = PAD.top + cH - bH;
+    const bw = barW * 0.6;
+    const radius = 5;
+
+    // Color based on quality
+    let c1, c2;
+    if (rec.hrs >= 7) { c1 = '#00e5c4'; c2 = '#4facfe'; }
+    else if (rec.hrs >= 6) { c1 = '#ffab3e'; c2 = '#ff7b54'; }
+    else { c1 = '#ff5f7e'; c2 = '#c94b6e'; }
+
+    const grad = ctx.createLinearGradient(x, y, x, y+bH);
+    grad.addColorStop(0, c1);
+    grad.addColorStop(1, c2);
+    ctx.fillStyle = grad;
+
+    // Rounded top bar
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + bw - radius, y);
+    ctx.arcTo(x + bw, y, x + bw, y + radius, radius);
+    ctx.lineTo(x + bw, y + bH);
+    ctx.lineTo(x, y + bH);
+    ctx.lineTo(x, y + radius);
+    ctx.arcTo(x, y, x + radius, y, radius);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor = c1;
+    ctx.shadowBlur  = 10;
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+
+    // Date label
+    const d = new Date(rec.date + 'T12:00:00');
+    const lbl = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    ctx.fillStyle = 'rgba(232,237,245,0.4)';
+    ctx.font = 'Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(lbl, x + bw/2, H - PAD.bottom + 14);
+
+    // Hrs label above bar
+    ctx.fillStyle = c1;
+    ctx.font = 'Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(rec.hrs.toFixed(1), x + bw/2, y - 5);
+  });
+}
+
+/* ── History ── */
+function renderHistory() {
+  const records = getRecords();
+  const list = document.getElementById('history-list');
+  if (!records.length) {
+    list.innerHTML = `<div class="empty"><span class="empty-icon">🌙</span>No sleep records yet.<br>Start logging tonight!</div>`;
+    return;
+  }
+  list.innerHTML = records.map((r, i) => {
+    const d   = new Date(r.date + 'T12:00:00');
+    const dStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const q   = quality(r.hrs);
+    return `
+      <div class="history-item">
+        <div class="h-icon">😴</div>
+        <div class="h-info">
+          <div class="h-date">${dStr}</div>
+          <div class="h-times">${r.sleep} → ${r.wake}</div>
+          <span class="quality-badge ${q.cls}">${q.label}</span>
+        </div>
+        <div class="h-dur">${fmtHrs(r.hrs)}</div>
+        <button class="del-btn" data-i="${i}" title="Delete">✕</button>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!confirm('Delete this record?')) return;
+      const records = getRecords();
+      records.splice(+btn.dataset.i, 1);
+      saveRecords(records);
+      renderHistory();
+    });
+  });
+}
+
+/* ── Init ── */
+renderAnalysis();
+drawChart();
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-analysis').classList.contains('active')) drawChart();
+});
+</script>
+</body>
+</html>
